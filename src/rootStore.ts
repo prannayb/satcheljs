@@ -1,4 +1,10 @@
 import { map, ObservableMap } from 'mobx';
 
-var rootStore: ObservableMap<any> = map({});
-export default rootStore;
+declare var global: any;
+
+if (!global._satcheljsRootStore) {
+    var rootStore: ObservableMap<any> = map({});
+    global._satcheljsRootStore = rootStore;
+}
+
+export default global._satcheljsRootStore;
