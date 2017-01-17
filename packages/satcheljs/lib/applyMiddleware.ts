@@ -18,14 +18,23 @@ function applyMiddlewareInternal(middleware: Middleware, next: DispatchFunction)
     return (action, actionType, args, actionContext) => middleware(next, action, actionType, args, actionContext);
 }
 
-export function dispatchWithMiddleware(action: ActionFunction, actionType: string, args: IArguments,  actionContext: ActionContext) {
-    if (!getGlobalContext().dispatchWithMiddleware) {
-        getGlobalContext().dispatchWithMiddleware = finalDispatch;
+export function dispatchWithMiddleware(action: ActionFunction, actionType: string, args: IArguments, actionContext: ActionContext): void | Promise<void> {
+    let globalContext = getGlobalContext();
+    if (!globalContext.dispatchWithMiddleware) {
+        globalContext.dispatchWithMiddleware = finalDispatch;
     }
 
-    getGlobalContext().dispatchWithMiddleware(action, actionType, args, actionContext);
+    let returnVal = globalContext.dispatchWithMiddleware(action, actionType, args, actionContext);
+
+    if (globalContext.dispatchWithMiddleware === finalDispatch) {
+        // Don't return the value from target action, it could be a Promise
+        // and thus confuse dispatcher about whether middleware returns a promise
+        return;
+    } else {
+        return returnVal;
+    }
 }
 
-function finalDispatch(action: ActionFunction, actionType: string, args: IArguments,  actionContext: ActionContext) {
+function finalDispatch(action: ActionFunction, actionType: string, args: IArguments, actionContext: ActionContext) {
     return action();
 }

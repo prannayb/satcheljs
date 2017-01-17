@@ -9,7 +9,7 @@ export interface GlobalContext {
     schemaVersion: number;
     inDispatch: number;
     rootStore: ObservableMap<any>;
-    dispatchWithMiddleware: (action: ActionFunction, actionType: string, args: IArguments, actionContext: ActionContext) => Promise<any> | void;
+    dispatchWithMiddleware: (action: ActionFunction, actionType: string, args: IArguments, actionContext: ActionContext) => Promise<void> | void;
     testMode: boolean;
 }
 

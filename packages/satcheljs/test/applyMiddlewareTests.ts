@@ -45,10 +45,10 @@ describe("applyMiddleware", () => {
     });
 
     it("Passes action parameters to middleware", () => {
-        let originalAction = () => {};
+        let originalAction = () => { };
         let originalActionType = "testAction";
         let originalArguments = <IArguments>{};
-        let originalOptions = {a:1};
+        let originalOptions = { a: 1 };
 
         var passedAction: ActionFunction;
         var passedActionType: string;
@@ -82,5 +82,42 @@ describe("applyMiddleware", () => {
 
         dispatchWithMiddleware(originalAction, null, null, null);
         expect(receivedReturnValue).toBe(originalReturnValue);
+    });
+
+    it("Returns the middleware promise from dispatchWithMiddleware", (done: () => void) => {
+        let actionCalled = false;
+        let originalReturnValue = Promise.resolve({});
+        let originalAction = () => {
+            actionCalled = true;
+            return originalReturnValue;
+        }
+        let receivedReturnValue: Promise<any> | void;
+        let timeout: NodeJS.Timer;
+
+        applyMiddleware(
+            (next, action, actionType, args, actionContext) => {
+                //return a promise
+                return new Promise((resolve) => {
+                    timeout = setTimeout(resolve, 5);
+                }).then(() => {
+                    receivedReturnValue = next(action, actionType, args, actionContext);
+                });
+            });
+
+        let dispatchReturnVal = dispatchWithMiddleware(originalAction, null, null, null);
+        expect(receivedReturnValue).not.toBe(originalReturnValue);
+        expect(actionCalled).toBeFalsy();
+        expect(dispatchReturnVal instanceof Promise).toBeTruthy();
+        if (dispatchReturnVal instanceof Promise) {
+            dispatchReturnVal.then(() => {
+                expect(receivedReturnValue).toBe(originalReturnValue);
+                expect(actionCalled).toBeTruthy();
+                done();
+            })
+        }
+        else {
+            clearTimeout(timeout);
+            fail();
+        }
     });
 });

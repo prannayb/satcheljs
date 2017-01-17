@@ -1,20 +1,35 @@
-import {useStrict, spy, action as mobxAction} from 'mobx';
+import { useStrict, spy, action as mobxAction } from 'mobx';
 import ActionContext from './ActionContext';
 import ActionFunction from './ActionFunction';
 import DispatchFunction from './DispatchFunction';
 import { dispatchWithMiddleware } from './applyMiddleware';
 import { getGlobalContext } from './globalContext';
 
-export default function dispatch(action: ActionFunction, actionType: string, args: IArguments,  actionContext: ActionContext): void {
+export default function dispatch(action: ActionFunction, actionType: string, args: IArguments, actionContext: ActionContext): void | Promise<void> {
+    // push dispatch stack state
     getGlobalContext().inDispatch++;
-
+    let returnValue: void | Promise<void>;
     mobxAction(
         actionType ? actionType : "(anonymous action)",
         () => {
-            dispatchWithMiddleware(action, actionType, args, actionContext);
+            returnValue = dispatchWithMiddleware(action, actionType, args, actionContext);
         })();
 
-    getGlobalContext().inDispatch--;
+    // check if dispatch returns a promise
+    if (typeof returnValue === "object" && returnValue !== null && typeof returnValue.then === "function") {
+        // if promise then mark dispatch complete when promise chain completes
+        returnValue.then(() => {
+            // pop dispatch stack state
+            getGlobalContext().inDispatch--;
+        });
+    }
+    else {
+        // if dispatch is not a promise, then it was synchronously executed
+        // pop dispatch stack state
+        getGlobalContext().inDispatch--;
+    }
+
+    return returnValue;
 }
 
 // Guard against state changes happening outside of SatchelJS actions
